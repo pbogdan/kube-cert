@@ -21,7 +21,6 @@ executable kube-cert
                      , kube-cert
                      , optparse-applicative
                      , iproute
-                     , lens
                      , transformers
                      , template
                      , turtle
@@ -31,11 +30,7 @@ executable kube-cert
                      , temporary
                      , filepath
                      , extra
-                     , wreq
-                     , lifted-base
-                     , monad-control
                      , unix
-                     , file-embed
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
 
@@ -46,6 +41,7 @@ library
   exposed-modules:     Lib
                      , Lib.Opts
                      , Lib.Env
+                     , Lib.IP
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , optparse-applicative

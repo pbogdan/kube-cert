@@ -2,12 +2,10 @@
 
 module Main where
 
-import           Control.Lens hiding (Context)
 import           Control.Monad (forM)
 import           Control.Monad (forM_)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
-import qualified Data.ByteString.Lazy.Char8 as ByteChar
 import           Data.IP
 import           Data.Monoid (mempty, (<>))
 import           Data.Text (Text)
@@ -17,12 +15,9 @@ import qualified Data.Text.Lazy as LazyText
 import           Data.Text.Template
 import           Lib
 import           Lib.Env (withEnv)
+import           Lib.IP (retrieveIp, parseMasterIP, firstIpInRange)
 import           Lib.Opts (Opts(..), optsParser, defaultOpts)
-import           Network.Wreq
-import           Options.Applicative (execParser)
-import           Options.Applicative (fullDesc)
-import           Options.Applicative (helper)
-import           Options.Applicative (info)
+import           Options.Applicative (execParser, fullDesc, helper, info)
 import           System.Directory.Extra
 import           System.Environment
 import           System.FilePath.Posix
@@ -31,51 +26,6 @@ import           System.Posix.Files
 import           System.Posix.User
 import           System.Process.Extra
 import qualified Turtle
-
-data MasterIp
-    = IpAddress !String
-    | GceExternalIp
-    | AwsExternalIp
-    | AzureDnsName
-    deriving (Show)
-
-parseMasterIP :: String -> MasterIp
-parseMasterIP ip = case ip of
-    "_use_gce_external_ip_" -> GceExternalIp
-    "_use_aws_external_ip_" -> AwsExternalIp
-    "_use_azure_dns_name_"  -> AzureDnsName
-    _                       -> IpAddress ip
-
-retrieveIp :: (MonadIO m) => MasterIp -> m IPv4
-retrieveIp ip = case ip of
-    IpAddress address -> parseIp address
-    GceExternalIp     -> fetchGceIp
-    AwsExternalIp     -> fetchAwsIp
-    AzureDnsName      -> fetchAzureIp
-
-parseIp :: (MonadIO m) => String -> m IPv4
-parseIp s = return (read s :: IPv4)
-
--- @TODO: implement connection timeout
-fetchGceIp :: (MonadIO m) => m IPv4
-fetchGceIp = do
-    let opts = defaults & header "Metadata-Flavor" .~ ["Google"]
-    r <- liftIO $ getWith opts "http://metadata.google.internal./computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip"
-    return $! (read (ByteChar.unpack (r ^. responseBody)) :: IPv4)
-
-fetchAwsIp :: (MonadIO m) => m IPv4
-fetchAwsIp = do
-    r <- liftIO $ get "http://169.254.169.254/latest/meta-data/public-ipv4"
-    return $! (read (ByteChar.unpack (r ^. responseBody)) :: IPv4)
-
-fetchAzureIp :: (MonadIO m) => m IPv4
-fetchAzureIp = error "not implemented"
-
--- extract first IP address of an IP range, with IP range being specified as
--- address + mask. We extract the IP range address and request first element via
--- its Enum instance
-firstIpInRange :: AddrRange IPv4 -> IPv4
-firstIpInRange = succ . addr
 
 defaultSans :: Opts -> IO [Text]
 defaultSans opts = do
