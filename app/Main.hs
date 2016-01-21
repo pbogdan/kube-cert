@@ -2,14 +2,13 @@
 
 module Main where
 
-import           Control.Monad (forM)
-import           Control.Monad (forM_)
+import           Control.Monad (forM, forM_)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Either
 import           Data.IP
 import           Data.Monoid (mempty, (<>))
 import           Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy as LazyText
 import           Data.Text.Template
@@ -31,15 +30,15 @@ defaultSans :: Opts -> IO [Text]
 defaultSans opts = do
     certIp <- retrieveIp (parseMasterIP (optsMasterIp opts))
     return $ 
-        [ "IP:" <> (T.pack $ show certIp)
-        , "IP:" <> (T.pack $ show (firstIpInRange (read (optsServiceClusterIpRange opts) :: AddrRange IPv4)))
+        [ "IP:" <> (Text.pack $ show certIp)
+        , "IP:" <> (Text.pack $ show (firstIpInRange (read (optsServiceClusterIpRange opts) :: AddrRange IPv4)))
         , "DNS:kubernetes"
         , "DNS:kubernetes.default"
         , "DNS:kubernetes.default.svc"
-        , "DNS:kubernetes.default.svc." <> (T.pack (optsDnsDomain opts))
-        , "DNS:" <> (T.pack $ (optsMasterName opts))]
+        , "DNS:kubernetes.default.svc." <> (Text.pack (optsDnsDomain opts))
+        , "DNS:" <> (Text.pack $ (optsMasterName opts))]
 
-context :: [(T.Text, T.Text)] -> Context
+context :: [(Text, Text)] -> Context
 context assocs x = maybe err id . lookup x $ assocs
   where err = error $ "Could not find key: " ++ show x
 
@@ -149,7 +148,7 @@ initCA opts =
 getOpenSslConfig :: Text -> FilePath -> Text
 getOpenSslConfig tpl path =
     let tt =
-            LazyText.toStrict $ substitute tpl $ context [("dir", T.pack path)]
+            LazyText.toStrict $ substitute tpl $ context [("dir", Text.pack path)]
     in tt
 
 genOpenSslConfig :: Text -> FilePath -> IO ()
@@ -164,12 +163,12 @@ genPrivateKey path bits args = do
     (ret,out) <-
         Turtle.procStrict
             "openssl"
-            (["genrsa", "-out", T.pack path] <> args <> [T.pack $ show bits])
+            (["genrsa", "-out", Text.pack path] <> args <> [Text.pack $ show bits])
             Turtle.empty
     case ret of
         Turtle.ExitSuccess -> right ()
         Turtle.ExitFailure _ ->
-            let err = "Can't generate key at " <> path <> T.unpack out
+            let err = "Can't generate key at " <> path <> Text.unpack out
             in left err
 
 genRootPrivateKey :: EitherT String IO ()
@@ -182,9 +181,9 @@ genCsr key path subject args = do
             "openssl"
             ([
                 "req"
-                , "-key", T.pack key
+                , "-key", Text.pack key
                 , "-new"
-                , "-out", T.pack path
+                , "-out", Text.pack path
                 , "-subj", subject
              ] <> args)
             Turtle.empty
@@ -192,7 +191,7 @@ genCsr key path subject args = do
     case ret of
         Turtle.ExitSuccess   -> right ()
         Turtle.ExitFailure _ ->
-            let err = "Failed to generate CSR at " <> path <> T.unpack out
+            let err = "Failed to generate CSR at " <> path <> Text.unpack out
             in left err
 
 genRootCsr :: EitherT String IO ()
@@ -210,9 +209,9 @@ genCert key csr path args = do
             "openssl"
             ([
                 "req"
-                , "-key", T.pack key
-                , "-in", T.pack csr
-                , "-out", T.pack path
+                , "-key", Text.pack key
+                , "-in", Text.pack csr
+                , "-out", Text.pack path
                 , "-x509"
                 , "-sha256"
             ] <> args)
@@ -220,7 +219,7 @@ genCert key csr path args = do
     case ret of
         Turtle.ExitSuccess   -> right ()
         Turtle.ExitFailure _ -> 
-            let err = "Unable to generate cert at " <> path <> T.unpack out
+            let err = "Unable to generate cert at " <> path <> Text.unpack out
             in left err
 
 genSignedCert :: FilePath -> FilePath -> FilePath -> [Text] -> EitherT String IO ()
@@ -230,9 +229,9 @@ genSignedCert key csr path args = do
             "openssl"
             ([
                 "ca"
-                , "-key", T.pack key
-                , "-in", T.pack csr
-                , "-out", T.pack path
+                , "-key", Text.pack key
+                , "-in", Text.pack csr
+                , "-out", Text.pack path
                 , "-notext"
                 , "-batch"
                 , "-md", "sha256"
@@ -241,7 +240,7 @@ genSignedCert key csr path args = do
     case ret of
         Turtle.ExitSuccess   -> right ()
         Turtle.ExitFailure _ -> 
-            let err = "Unable to generate cert at " <> path <> T.unpack out
+            let err = "Unable to generate cert at " <> path <> Text.unpack out
             in left err
 
 
@@ -259,7 +258,7 @@ genServerCert :: FilePath
               -> [Text]
               -> EitherT String IO ()
 genServerCert key csr path sans =
-    withEnv [("subjectAltName", T.unpack $ T.intercalate "," sans)] $ do
+    withEnv [("subjectAltName", Text.unpack $ Text.intercalate "," sans)] $ do
         liftIO $ putStrLn =<< getEnv "subjectAltName"
         genSignedCert
            key
