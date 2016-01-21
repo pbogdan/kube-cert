@@ -39,5 +39,5 @@ deploy:
     secure: O7mMYhRENH/48DZ8CEGIXarr1324ZSbYFxEbKb4mXkEBdg8PkLBJQgXG/V9AwoiUxp8FOjwQ+mcd9xHLpO4wzWCs0A+PXi4geMd/PcmsfF/q1a49VzZhXNuUoxzahl3DPOU6+HVwWTQ9HkI1slg6Ry2m0nT8ok9FnNTUmi3dPu3Uniz1VGNatcO0oel7a5Q9I7b00OtyrnTJG6VARouBM/Ap7V28BOFuBz+kRS5K5S3gx9HfxRHSWwDFLYiEAOhYYpeqdQJMd/0JqrMrwPTAw+pubYmAdICSx0LnRkwV7LjPsOvYGwaNwjeZ6kPU7ZXZkFJQDpjKqS0J62Vg4i7HmXVVYLeKCCjlYM+pCT9B4JPcHajsY/hiqry3L87aOOcjRnoX0z7KkPvycFXN9f+ycljJPH3XbEOeGzh7IkGWowsMwHssywbIBSYByaRe+tSK/FK1/Re/EBkIM8+hhuQLASAquKNBP2oOkbYr8TgzxcscccjEW3f9l2bxr0FemzQcJB+5sY00lRxqfIZl7JuJZsD83qOjaRr6ZPzeTHPDNmnmPRFQ21uKHWxVQl80EUwHMsooS/QZp9IS5yzKjQ6XLByCE/xoE5gXEhf6qBt/J2mxiNIg+LT4wqv36CLFSi44SlDwZNblODlHMcaVBBg72KvyXcYkiQY+50XVNpYsZz8=
   file: to-travis/kube-cert.bz2
   on:
-    repo: pbogdan/kube-cert
+    tags: true
   
