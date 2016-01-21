@@ -20,13 +20,13 @@ import           Data.Text.Template
 import           Lib
 import           Network.Wreq
 import           Options.Applicative hiding (header)
-import           System.Directory
 import           System.Environment
 import           System.FilePath.Posix
 import           System.IO.Temp
 import           System.Posix.Files
 import           System.Posix.User
 import           System.Process.Extra
+import           System.Directory.Extra
 import qualified Turtle
 
 data Opts = Opts
