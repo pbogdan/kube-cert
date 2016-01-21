@@ -2,12 +2,10 @@
 
 module Main where
 
-import           Control.Exception.Lifted
 import           Control.Lens hiding (Context)
 import           Control.Monad (forM)
 import           Control.Monad (forM_)
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Lazy.Char8 as ByteChar
 import           Data.IP
@@ -18,6 +16,7 @@ import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy as LazyText
 import           Data.Text.Template
 import           Lib
+import           Lib.Env (withEnv)
 import           Lib.Opts (Opts(..), optsParser, defaultOpts)
 import           Network.Wreq
 import           Options.Applicative (execParser)
@@ -335,15 +334,6 @@ genClientCert key csr path =
            , "-config" , "openssl-san.cnf"
            , "-extensions" , "usr_cert"
            ]
-
-withEnv
-    :: (Traversable t, MonadBaseControl IO m, MonadIO m)
-    => t (String, String) -> m c -> m c
-withEnv envvars action =
-    bracket
-    (forM envvars $ \ (name, val) -> liftIO $ setEnv name val)
-    (\ _ -> forM envvars $ \ (name, _) -> liftIO $ setEnv name "")
-    (\ _ -> action)
 
 main :: IO ()
 main = do
