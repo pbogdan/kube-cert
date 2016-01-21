@@ -44,6 +44,7 @@ executable kube-cert
 library
   hs-source-dirs:      src
   exposed-modules:     Lib
+                     , Lib.Opts
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , optparse-applicative

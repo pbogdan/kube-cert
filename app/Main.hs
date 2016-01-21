@@ -11,66 +11,27 @@ import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Either
 import qualified Data.ByteString.Lazy.Char8 as ByteChar
 import           Data.IP
-import           Data.Monoid (mempty)
+import           Data.Monoid (mempty, (<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy as LazyText
 import           Data.Text.Template
 import           Lib
+import           Lib.Opts (Opts(..), optsParser, defaultOpts)
 import           Network.Wreq
-import           Options.Applicative hiding (header)
+import           Options.Applicative (execParser)
+import           Options.Applicative (fullDesc)
+import           Options.Applicative (helper)
+import           Options.Applicative (info)
+import           System.Directory.Extra
 import           System.Environment
 import           System.FilePath.Posix
 import           System.IO.Temp
 import           System.Posix.Files
 import           System.Posix.User
 import           System.Process.Extra
-import           System.Directory.Extra
 import qualified Turtle
-
-data Opts = Opts
-    { optsMasterIp              :: !String
-    , optsMasterName            :: !String
-    , optsDnsDomain             :: !String
-    , optsServiceClusterIpRange :: !String
-    , optsCertDir               :: !String
-    , optsCertGroup             :: !String
-    } deriving (Show)
-
-parseOpts :: Parser Opts
-parseOpts =
-    Opts <$>
-    option
-        str
-        (long "master-ip" <> showDefault <> metavar "master-ip" <>
-         help "master ip") <*>
-    option
-        str
-        (long "master-name" <> showDefault <> metavar "master-name" <>
-         help "master name" <>
-         value "kubernetes") <*>
-    option
-        str
-        (long "dns-domain" <> showDefault <> metavar "dns-domain" <>
-         help "dns domain" <>
-         value "cluster.local") <*>
-    option
-        str
-        (long "service-cluster-ip-range" <> showDefault <>
-         metavar "service-cluster-ip-range" <>
-         help "service cluster-ip-range" <>
-         value "10.0.0.0/16") <*>
-    option
-        str
-        (long "cert-dir" <> showDefault <> metavar "cert-dir" <>
-         help "cert dir" <>
-         value "/srv/kubernetes") <*>
-    option
-        str
-        (long "cert-group" <> showDefault <> metavar "cert-group" <>
-         help "cert group" <>
-         value "kube-cert")
 
 data MasterIp
     = IpAddress !String
@@ -132,17 +93,6 @@ defaultSans opts = do
 context :: [(T.Text, T.Text)] -> Context
 context assocs x = maybe err id . lookup x $ assocs
   where err = error $ "Could not find key: " ++ show x
-
-defaultOpts :: Opts
-defaultOpts =
-    Opts
-    { optsMasterIp = "192.168.1.10"
-    , optsMasterName = "kubernetes.master"
-    , optsDnsDomain = "kubernetes.cluster"
-    , optsServiceClusterIpRange = "10.0.0.0/16"
-    , optsCertDir = "/tmp"
-    , optsCertGroup = "piotr"
-    }
 
 initCA :: Opts -> IO ()
 initCA opts =
@@ -397,7 +347,7 @@ withEnv envvars action =
 
 main :: IO ()
 main = do
-    opts <- execParser (info (helper <*> parseOpts) (fullDesc <> mempty))
+    opts <- execParser (info (helper <*> optsParser) (fullDesc <> mempty))
     initCA opts
     return ()
 
