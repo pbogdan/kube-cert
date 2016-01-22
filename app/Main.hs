@@ -14,6 +14,10 @@ import           Lib
 import           Lib.Env (withEnv)
 import           Lib.IP (retrieveIp, parseMasterIP, firstIpInRange)
 import           Lib.Opts (Opts(..), optsParser, defaultOpts)
+import           Lib.Template
+       (openSslTemplate, openSslSanTemplate, getOpenSslConfig,
+        genOpenSslConfig)
+import Lib.Proc (sysOut)       
 import           Options.Applicative (execParser, fullDesc, helper, info)
 import           System.Directory.Extra
 import           System.Environment
@@ -35,10 +39,6 @@ defaultSans opts = do
         , "DNS:kubernetes.default.svc"
         , "DNS:kubernetes.default.svc." <> (Text.pack (optsDnsDomain opts))
         , "DNS:" <> (Text.pack $ (optsMasterName opts))]
-
-context :: [(Text, Text)] -> Context
-context assocs x = maybe err id . lookup x $ assocs
-  where err = error $ "Could not find key: " ++ show x
 
 initCA :: Opts -> IO ()
 initCA opts =
