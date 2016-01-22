@@ -1,6 +1,10 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
+import           Control.Exception (Exception, SomeException, try)
 import           Control.Monad (forM_)
+import           Control.Monad.IO.Class (MonadIO,liftIO)
 import           Control.Monad.Trans.Either
 import           Data.IP
 import           Data.Monoid ((<>))
@@ -58,7 +62,7 @@ setupServerCert sans = do
     genCsr
         "private/server.key"
         "server.csr"
-        "/C=GB/ST=England/O=Kubernetes Cluster/CN=lol.com"
+        "/C=GB/ST=England/O=Kubernetes Cluster/CN=example.com"
         ["-config", "openssl.cnf"]
     genServerCert 
         "private/server.key"
@@ -107,47 +111,55 @@ generateCerts opts =
                 setupKubeletCert
                 setupKubecfgCert
 
+                let certFiles = 
+                        [
+                        "certs/ca.crt"
+                        , "private/ca.key"
+                        , "certs/server.crt"
+                        , "certs/kubelet.crt"
+                        , "certs/kubecfg.crt"
+                        , "private/server.key"
+                        , "private/kubelet.key"
+                        , "private/kubecfg.key"
+                        ]
+     
+                liftException
+                    (forM_ certFiles $ \ certFile ->
+                        copyFile certFile (optsCertDir opts </> takeFileName certFile))
+                    (\ (ex :: SomeException) -> left $ show ex)
+                    right
+
+                
+                gid <- liftIO $ groupID <$> getGroupEntryForName (optsCertGroup opts)
+     
+                liftException
+                    (forM_ certFiles $ \ certFile ->
+                         setOwnerAndGroup 
+                             (optsCertDir opts </> takeFileName certFile) 
+                             (-1)
+                             gid)
+                    (\ (ex :: SomeException) -> left $ show ex)
+                    right
+     
+                let perms =
+                        foldr
+                            unionFileModes
+                            nullFileMode
+                            [ ownerReadMode
+                            , ownerWriteMode
+                            , groupReadMode
+                            , groupWriteMode]
+                liftException
+                    (forM_ certFiles $ \ certFile ->
+                         setFileMode
+                             (optsCertDir opts </> takeFileName certFile)
+                             perms)
+                    (\ (ex :: SomeException) -> left $ show ex)
+                    right
+
             case r of
-                Right () -> putStrLn "Certs generated successfully "
+                Right () -> putStrLn "Certs generated successfully."
                 Left err -> putStrLn $ "Failed to generate certs: " <> err
-
-            let certFiles = 
-                    [
-                    "certs/ca.crt"
-                    , "private/ca.key"
-                    , "certs/server.crt"
-                    , "certs/kubelet.crt"
-                    , "certs/kubecfg.crt"
-                    , "private/server.key"
-                    , "private/kubelet.key"
-                    , "private/kubecfg.key"
-                    ]
-
-            forM_ certFiles $ \ certFile ->
-                copyFile certFile (optsCertDir opts </> takeFileName certFile)
-            
-
-            gid <- groupID <$> getGroupEntryForName (optsCertGroup opts)
-
-            forM_ certFiles $ \ certFile ->
-                setOwnerAndGroup 
-                    (optsCertDir opts </> takeFileName certFile) 
-                    (-1)
-                    gid
-
-            let perms =
-                    foldr
-                        unionFileModes
-                        nullFileMode
-                        [ ownerReadMode
-                        , ownerWriteMode
-                        , groupReadMode
-                        , groupWriteMode]
-
-            forM_ certFiles $ \ certFile ->
-                setFileMode
-                    (optsCertDir opts </> takeFileName certFile)
-                    perms
 
             -- mapM_ putStrLn =<< 
             --     (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/kubelet.crt"])
@@ -159,6 +171,15 @@ generateCerts opts =
             --     (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/kubecfg.crt"])
 
             return ()
+
+liftException
+    :: (MonadIO m, Exception ex)
+    => IO a -> (ex -> EitherT e m a) -> (a -> EitherT e m a) -> EitherT e m a
+liftException action left_ right_ = do
+    x <- liftIO $! try action
+    case x of
+        Left  l -> left_  l
+        Right r -> right_ r
 
 main :: IO ()
 main = do
