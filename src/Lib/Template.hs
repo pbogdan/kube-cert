@@ -7,7 +7,6 @@ module Lib.Template
       , genOpenSslConfig
     ) where
 
-import           Data.ByteString
 import           Data.FileEmbed
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -16,6 +15,7 @@ import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy as LazyText
 import           Data.Text.Template
 import           System.FilePath (takeDirectory)
+import           Data.Maybe (fromMaybe)
 
 openSslTemplate :: Text
 openSslTemplate = Text.decodeUtf8 $(embedFile "openssl.cnf")
@@ -24,13 +24,13 @@ openSslSanTemplate :: Text
 openSslSanTemplate = Text.decodeUtf8 $(embedFile "openssl-san.cnf")
 
 context :: [(Text, Text)] -> Context
-context assocs x = maybe err id . lookup x $ assocs
+context assocs x = fromMaybe err . lookup x $ assocs
   where err = error $ "Could not find key: " ++ show x
 
 getOpenSslConfig :: Text -> FilePath -> Text
 getOpenSslConfig tpl path =
     let tt =
-            LazyText.toStrict $ substitute tpl $ context [("dir", Text.pack path)]
+            (LazyText.toStrict . substitute tpl $ context [("dir", Text.pack path)])
     in tt
 
 genOpenSslConfig :: Text -> FilePath -> IO ()
