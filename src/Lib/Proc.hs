@@ -22,10 +22,11 @@ sysOut path args = do
       wrap s = "'" <> s <> "'"
 
 sysEitherT
-    :: IO (ExitCode, Text)
-    -> (Text -> EitherT String IO ())
-    -> (Text -> EitherT String IO ())
-    -> EitherT String IO ()
+    :: (MonadIO m)
+    => IO (ExitCode, Text)
+    -> (Text -> EitherT e m a)
+    -> (Text -> EitherT e m a)
+    -> EitherT e m a
 sysEitherT action left_ right_ = do
     (ret, out) <- liftIO action
     case ret of
