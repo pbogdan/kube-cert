@@ -17,7 +17,7 @@ import           Lib.Opts (Opts(..), optsParser, defaultOpts)
 import           Lib.Template
        (openSslTemplate, openSslSanTemplate, getOpenSslConfig,
         genOpenSslConfig)
-import Lib.Proc (sysOut)       
+import Lib.Proc (sysOut, sysEitherT)       
 import           Options.Applicative (execParser, fullDesc, helper, info)
 import           System.Directory.Extra
 import           System.Environment
@@ -138,44 +138,37 @@ initCA opts =
             setFileMode ((optsCertDir opts) </> "kubelet.key") perms
             setFileMode ((optsCertDir opts) </> "kubecfg.key") perms
 
-            Turtle.proc "openssl" ["x509", "-noout", "-text", "-in", "certs/kubelet.crt"] Turtle.empty
-            Turtle.proc "openssl" ["x509", "-noout", "-text", "-in", "certs/kubecfg.crt"] Turtle.empty
+            mapM_ putStrLn =<< 
+                (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/kubelet.crt"])
+
+            mapM_ putStrLn =<< 
+                (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/server.crt"])
+
+            mapM_ putStrLn =<<  
+                (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/kubecfg.crt"])
 
             return ()
-
-getOpenSslConfig :: Text -> FilePath -> Text
-getOpenSslConfig tpl path =
-    let tt =
-            LazyText.toStrict $ substitute tpl $ context [("dir", Text.pack path)]
-    in tt
-
-genOpenSslConfig :: Text -> FilePath -> IO ()
-genOpenSslConfig tpl path = do
-    _ <- Text.writeFile path (getOpenSslConfig tpl (takeDirectory path))
-    return ()
 
 type PrivateKeyBits = Int
 
 genPrivateKey :: FilePath -> PrivateKeyBits -> [Text] -> EitherT String IO ()
-genPrivateKey path bits args = do
-    (ret,out) <-
-        Turtle.procStrict
+genPrivateKey path bits args =
+    sysEitherT
+        (sysOut
             "openssl"
-            (["genrsa", "-out", Text.pack path] <> args <> [Text.pack $ show bits])
-            Turtle.empty
-    case ret of
-        Turtle.ExitSuccess -> right ()
-        Turtle.ExitFailure _ ->
+            (["genrsa", "-out", Text.pack path] <> args <> [Text.pack $ show bits]))
+        (\ out -> 
             let err = "Can't generate key at " <> path <> Text.unpack out
-            in left err
+            in left err)
+        (const $ right ())
 
 genRootPrivateKey :: EitherT String IO ()
 genRootPrivateKey = genPrivateKey "private/ca.key.pem" 4096 mempty
 
 genCsr :: FilePath -> FilePath -> Text -> [Text] -> EitherT String IO ()
-genCsr key path subject args = do
-    (ret,out) <-
-        Turtle.procStrict
+genCsr key path subject args =
+    sysEitherT
+        (sysOut
             "openssl"
             ([
                 "req"
@@ -183,14 +176,11 @@ genCsr key path subject args = do
                 , "-new"
                 , "-out", Text.pack path
                 , "-subj", subject
-             ] <> args)
-            Turtle.empty
-
-    case ret of
-        Turtle.ExitSuccess   -> right ()
-        Turtle.ExitFailure _ ->
+             ] <> args))
+        (\ out ->
             let err = "Failed to generate CSR at " <> path <> Text.unpack out
-            in left err
+            in left err)
+        (const $ right ())
 
 genRootCsr :: EitherT String IO ()
 genRootCsr =
@@ -201,9 +191,9 @@ genRootCsr =
         ["-config", "openssl.cnf"]
 
 genCert :: FilePath -> FilePath -> FilePath -> [Text] -> EitherT String IO ()
-genCert key csr path args = do
-    (ret, out) <-
-        Turtle.procStrict
+genCert key csr path args =
+    sysEitherT
+        (sysOut
             "openssl"
             ([
                 "req"
@@ -212,18 +202,16 @@ genCert key csr path args = do
                 , "-out", Text.pack path
                 , "-x509"
                 , "-sha256"
-            ] <> args)
-            Turtle.empty
-    case ret of
-        Turtle.ExitSuccess   -> right ()
-        Turtle.ExitFailure _ -> 
+            ] <> args))
+        (\ out ->
             let err = "Unable to generate cert at " <> path <> Text.unpack out
-            in left err
+            in left err)
+        (const $ right ())
 
 genSignedCert :: FilePath -> FilePath -> FilePath -> [Text] -> EitherT String IO ()
-genSignedCert key csr path args = do
-    (ret, out) <-
-        Turtle.procStrict
+genSignedCert key csr path args =
+    sysEitherT
+        (sysOut
             "openssl"
             ([
                 "ca"
@@ -233,14 +221,11 @@ genSignedCert key csr path args = do
                 , "-notext"
                 , "-batch"
                 , "-md", "sha256"
-            ] <> args)
-            Turtle.empty
-    case ret of
-        Turtle.ExitSuccess   -> right ()
-        Turtle.ExitFailure _ -> 
+            ] <> args))
+        (\ out ->
             let err = "Unable to generate cert at " <> path <> Text.unpack out
-            in left err
-
+            in left err)
+        (const $ right ())
 
 genRootCert :: EitherT String IO ()
 genRootCert =
