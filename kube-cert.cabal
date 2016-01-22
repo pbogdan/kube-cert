@@ -22,8 +22,6 @@ executable kube-cert
                      , optparse-applicative
                      , iproute
                      , transformers
-                     , template
-                     , turtle
                      , text
                      , directory
                      , either
@@ -42,6 +40,8 @@ library
                      , Lib.Opts
                      , Lib.Env
                      , Lib.IP
+                     , Lib.Template
+                     , Lib.Proc
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , optparse-applicative
@@ -49,7 +49,6 @@ library
                      , lens
                      , transformers
                      , template
-                     , turtle
                      , text
                      , temporary
                      , directory
