@@ -1,4 +1,4 @@
-module Lib.Proc 
+module Lib.Proc
     ( sysOut
     , sysEitherT)
 where

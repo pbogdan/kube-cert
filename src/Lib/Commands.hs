@@ -28,7 +28,7 @@ genPrivateKey path bits args =
         (sysOut
             "openssl"
             (["genrsa", "-out", Text.pack path] <> args <> [Text.pack $ show bits]))
-        (\ out -> 
+        (\ out ->
             let err = "Can't generate key at " <> path <> Text.unpack out
             in left err)
         (const $ right ())

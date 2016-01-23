@@ -25,7 +25,7 @@ import           System.Posix.User
 defaultSans :: Opts -> IO [Text]
 defaultSans opts = do
     certIp <- retrieveIp (parseMasterIP (optsMasterIp opts))
-    return 
+    return
         [ "IP:" <> Text.pack (show certIp)
         , "IP:" <> Text.pack (show (firstIpInRange (read (optsServiceClusterIpRange opts) :: AddrRange IPv4)))
         , "DNS:kubernetes"
@@ -40,13 +40,13 @@ initCA root =
         let templates =
                 [ (openSslTemplate,    "openssl.cnf")
                 , (openSslSanTemplate, "openssl-san.cnf")]
-         
+
         forM_ templates $ \ (action, tplpath) ->
             genOpenSslConfig action tplpath
 
         forM_ ["certs", "crl", "newcerts", "private"] $ \ subdir ->
             createDirectory subdir
-        
+
         Text.writeFile "index.txt" ""
         Text.writeFile "serial" "1000"
 
@@ -64,7 +64,7 @@ setupServerCert sans = do
         "server.csr"
         "/C=GB/ST=England/O=Kubernetes Cluster/CN=example.com"
         ["-config", "openssl.cnf"]
-    genServerCert 
+    genServerCert
         "private/server.key"
         "server.csr"
         "certs/server.crt"
@@ -104,14 +104,14 @@ generateCerts opts =
         withCurrentDirectory tmpdir $ do
 
             sans <- defaultSans opts
-        
+
             r <- runEitherT $ do
                 setupCA
                 setupServerCert sans
                 setupKubeletCert
                 setupKubecfgCert
 
-                let certFiles = 
+                let certFiles =
                         [
                         "certs/ca.crt"
                         , "private/ca.key"
@@ -122,25 +122,25 @@ generateCerts opts =
                         , "private/kubelet.key"
                         , "private/kubecfg.key"
                         ]
-     
+
                 liftException
                     (forM_ certFiles $ \ certFile ->
                         copyFile certFile (optsCertDir opts </> takeFileName certFile))
                     (\ (ex :: SomeException) -> left $ show ex)
                     right
 
-                
+
                 gid <- liftIO $ groupID <$> getGroupEntryForName (optsCertGroup opts)
-     
+
                 liftException
                     (forM_ certFiles $ \ certFile ->
-                         setOwnerAndGroup 
-                             (optsCertDir opts </> takeFileName certFile) 
+                         setOwnerAndGroup
+                             (optsCertDir opts </> takeFileName certFile)
                              (-1)
                              gid)
                     (\ (ex :: SomeException) -> left $ show ex)
                     right
-     
+
                 let perms =
                         foldr
                             unionFileModes
@@ -161,13 +161,13 @@ generateCerts opts =
                 Right () -> putStrLn "Certs generated successfully."
                 Left err -> putStrLn $ "Failed to generate certs: " <> err
 
-            -- mapM_ putStrLn =<< 
+            -- mapM_ putStrLn =<<
             --     (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/kubelet.crt"])
 
-            -- mapM_ putStrLn =<< 
+            -- mapM_ putStrLn =<<
             --     (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/server.crt"])
 
-            -- mapM_ putStrLn =<<  
+            -- mapM_ putStrLn =<<
             --     (lines . Text.unpack . snd <$> sysOut "openssl" ["x509", "-noout", "-text", "-in", "certs/kubecfg.crt"])
 
             return ()
