@@ -2,7 +2,7 @@
 
 module Main where
 
-import           Control.Exception (Exception, SomeException, try)
+import           Control.Exception (Exception, IOException, try)
 import           Control.Monad (forM_)
 import           Control.Monad.IO.Class (MonadIO,liftIO)
 import           Control.Monad.Trans.Either
@@ -126,7 +126,7 @@ generateCerts opts =
                 liftException
                     (forM_ certFiles $ \ certFile ->
                         copyFile certFile (optsCertDir opts </> takeFileName certFile))
-                    (\ (ex :: SomeException) -> left $ show ex)
+                    (\ (ex :: IOException) -> left $ show ex)
                     right
 
 
@@ -138,7 +138,7 @@ generateCerts opts =
                              (optsCertDir opts </> takeFileName certFile)
                              (-1)
                              gid)
-                    (\ (ex :: SomeException) -> left $ show ex)
+                    (\ (ex :: IOException) -> left $ show ex)
                     right
 
                 let perms =
@@ -152,9 +152,9 @@ generateCerts opts =
                 liftException
                     (forM_ certFiles $ \ certFile ->
                          setFileMode
-                             (optsCertDir opts </> takeFileName certFile)
+                             (optsCertDir opts </> takeFileName certFile </> "LOL")
                              perms)
-                    (\ (ex :: SomeException) -> left $ show ex)
+                    (\ (ex :: IOException) -> left $ show ex)
                     right
 
             case r of
