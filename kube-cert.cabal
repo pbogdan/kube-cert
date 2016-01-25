@@ -1,5 +1,5 @@
 name:                kube-cert
-version:             0.2.0.0
+version:             0.3.0.0
 synopsis:            Generate certificates for kubernetes cluster.
 description:         Please see README.md
 homepage:            http://github.com/pbogdan/kube-cert#readme
