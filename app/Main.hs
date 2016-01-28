@@ -14,7 +14,8 @@ import qualified Data.Text.IO as Text
 import           Lib.Commands
 import           Lib.IP (retrieveIp, parseMasterIP, firstIpInRange)
 import           Lib.Opts (Opts(..), optsParser, defaultOpts)
-import           Lib.Template (openSslTemplate, openSslSanTemplate, genOpenSslConfig)
+import           Lib.Template
+                 (openSslTemplate, openSslSanTemplate, genOpenSslConfig)
 import           Options.Applicative (execParser, fullDesc, helper, info)
 import           System.Directory.Extra
 import           System.FilePath.Posix
@@ -26,13 +27,19 @@ defaultSans :: Opts -> IO [Text]
 defaultSans opts = do
     certIp <- retrieveIp (parseMasterIP (optsMasterIp opts))
     return
-        [ "IP:" <> Text.pack (show certIp)
-        , "IP:" <> Text.pack (show (firstIpInRange (read (optsServiceClusterIpRange opts) :: AddrRange IPv4)))
+        [ "IP:" <> tshow certIp
+        , "IP:" <> tshow (firstInRange $ optsServiceClusterIpRange opts)
         , "DNS:kubernetes"
         , "DNS:kubernetes.default"
         , "DNS:kubernetes.default.svc"
         , "DNS:kubernetes.default.svc." <> Text.pack (optsDnsDomain opts)
         , "DNS:" <> Text.pack (optsMasterName opts)]
+  where
+    firstInRange :: String -> IPv4
+    firstInRange range = firstIpInRange (read range :: AddrRange IPv4)
+
+    tshow :: Show a => a -> Text
+    tshow = Text.pack . show
 
 initCA :: FilePath -> IO ()
 initCA root =
